@@ -15,3 +15,11 @@ NEWS_API = {
     "request_url": "https://newsapi.org/v2/everything",
     "api_key": "ABC123"
 }
+
+# https://www.twilio.com
+TWILIO = {
+    "account_sid": "ABC123",
+    "auth_token": "ABC123",
+    "from": "+3535353535353",
+    "to": "+3535353535353"
+}

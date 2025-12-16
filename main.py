@@ -1,5 +1,6 @@
 import config
 import requests
+from twilio.rest import Client
 
 def get_stock_data():
     """Returns a dictionary representing stock price data for the given company for the previous 100 days"""
@@ -31,10 +32,12 @@ def get_news_data(date):
 
     return response.json()["articles"]
 
-def get_date_of_most_recent_fluctuation():
-    """Returns a string in format YYYY-MM-DD representing the date of the most recent overnight stock price change to breach the given threshold"""
+# TODO: stretch - refactor out tuple return type (i.e. into separate functions for each value)
+def get_most_recent_threshold_stock_change():
+    """Returns a tuple comprising a string representing the date of the most recent overnight stock price change to breach the given threshold, and a float representing the percentage change"""
     stock_data = get_stock_data()
 
+    # Manipulate data into a more user-friendly list of dictionairies
     daily_stock_data_list = [stock_data[daily_stock_data] for daily_stock_data in stock_data]
 
     for i, daily_stock_data in enumerate(stock_data):
@@ -46,27 +49,44 @@ def get_date_of_most_recent_fluctuation():
         percentage_diff = ((opening_price - previous_closing_price) / opening_price) * 100
 
         if abs(percentage_diff) >= config.DAILY_FLUCTUATION_THRESHOLD:
-            return daily_stock_data["date"]
+            return daily_stock_data["date"], percentage_diff
 
-        return None
+    return None
 
-date = get_date_of_most_recent_fluctuation()
-if date:
+def send_sms_notifications(articles, date, percentage_change):
+    """Sends SMS notifications including stock price change for the given company along with up to three links to related news stories"""
+    account_sid = config.TWILIO["account_sid"]
+    auth_token = config.TWILIO["auth_token"]
+    client = Client(account_sid, auth_token)
+
+    # Send message indicating stock price % change
+    arrow_emoji = "🔺" if percentage_change > 0 else "🔻"
+    message_body = f"\n{config.COMPANY["name"]}: {arrow_emoji}{round(abs(percentage_change), 2)}% at open of {date}\n"
+
+    message = client.messages.create(
+        from_=config.TWILIO["from"],
+        body=message_body,
+        to=config.TWILIO["to"]
+    )
+    print(message.status)
+
+    # Send links to related articles
+    for article in articles:
+        # TODO: stretch = handle sms message character limit
+        message_body = f"{article["url"]}\n"
+        message = client.messages.create(
+            from_=config.TWILIO["from"],
+            body=message_body,
+            to=config.TWILIO["to"]
+        )
+        print(message.status)
+
+stock_change = get_most_recent_threshold_stock_change()
+if stock_change:
+    date = stock_change[0]
+    percentage_change = stock_change[1]
+
     news_data = get_news_data(date)
-    for article in news_data[:3]:
-        print(f"{article["publishedAt"]}\n{article["title"]}\n{article["url"]}\n{article["content"]}\n")
+    send_sms_notifications(news_data[:3], date, percentage_change)
 
-## STEP 3: Use https://www.twilio.com
-# Send a seperate message with the percentage change and each article's title and description to your phone number. 
-
-#Optional: Format the SMS message like this: 
-"""
-TSLA: 🔺2%
-Headline: Were Hedge Funds Right About Piling Into Tesla Inc. (TSLA)?. 
-Brief: We at Insider Monkey have gone over 821 13F filings that hedge funds and prominent investors are required to file by the SEC The 13F filings show the funds' and investors' portfolio positions as of March 31st, near the height of the coronavirus market crash.
-or
-"TSLA: 🔻5%
-Headline: Were Hedge Funds Right About Piling Into Tesla Inc. (TSLA)?. 
-Brief: We at Insider Monkey have gone over 821 13F filings that hedge funds and prominent investors are required to file by the SEC The 13F filings show the funds' and investors' portfolio positions as of March 31st, near the height of the coronavirus market crash.
-"""
 

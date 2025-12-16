@@ -4,9 +4,14 @@ ALPHA_VANTAGE = {
 }
 
 COMPANY = {
-    "name": "Chubb Ltd",
-    "symbol": "CB"
+    "name": "Tesla Inc",
+    "symbol": "TSLA"
 }
 
 # Overnight percentage change in stock price which should trigger alert
 DAILY_FLUCTUATION_THRESHOLD = 5
+
+NEWS_API = {
+    "request_url": "https://newsapi.org/v2/everything",
+    "api_key": "ABC123"
+}

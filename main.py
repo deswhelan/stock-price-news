@@ -44,9 +44,10 @@ def get_most_recent_threshold_stock_change():
         daily_stock_data_list[i]["date"] = daily_stock_data
 
     for i, daily_stock_data in enumerate(daily_stock_data_list[:-1]):
+        # TODO: stretch - refactor intp separate method
         opening_price = float(daily_stock_data["1. open"])
         previous_closing_price = float(daily_stock_data_list[i + 1]['4. close'])
-        percentage_diff = ((opening_price - previous_closing_price) / opening_price) * 100
+        percentage_diff = ((opening_price - previous_closing_price) / previous_closing_price) * 100
 
         if abs(percentage_diff) >= config.DAILY_FLUCTUATION_THRESHOLD:
             return daily_stock_data["date"], percentage_diff
